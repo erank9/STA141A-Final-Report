@@ -1,0 +1,10 @@
+---
+title: "STA141A Final Report"
+output: html_document
+date: "2026-02-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
