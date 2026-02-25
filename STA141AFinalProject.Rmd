@@ -6,5 +6,45 @@ date: "2026-02-17"
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(dplyr)
+
+wildfires <- read.csv("../Data/wildfires_sample_100k.csv")
+
+str(wildfires)
 ```
 
+Abstract
+Introduction (optional)
+
+US wildfire data from 1992 to 2015
+
+1. Data Preprocessing
+```{r}
+# filter notable fires, date formatting
+wildfires1 <- wildfires %>% 
+  filter(FIRE_SIZE >= 300) %>%
+  mutate(Date = as.Date(DISCOVERY_DATE - 2440587.5, origin = "1970-01-01")) %>%
+# column for month
+  mutate(season = case_when(month %in% c('December', 'January', 'February') ~ 'winter', month %in% c('May', 'April', 'March') ~ 'spring', month %in% c('June','July','August'), month %in% c('September','October','November')))
+
+head(wildfires1)
+
+# make a variable for month and season
+
+```
+
+## 2. Exploratory Data Analysis
+
+```{r}
+# minimum output = 2 exploratory plots w interpretation
+# How strong is seasonality?
+# Are there trends over time?
+```
+
+## 3. Modeling
+
+## 4. Model Fitting and Validation
+
+## 5. Summary
