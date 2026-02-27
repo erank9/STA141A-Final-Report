@@ -18,30 +18,130 @@ str(wildfires)
 Abstract
 Introduction (optional)
 
-US wildfire data from 1992 to 2015
+This report uses a subset of historical wildfire records from the from the Kaggle dataset “188 Million US Wildfires” that records data from 1992 to 2015.
 
-1. Data Preprocessing
+I am using this data to estimate the probability of wildfires in future months, also considering geographic area.
+
+Understanding patterns in the wildfire data could contribute to emergency preparedness and fire management.
+
+1. Data Pre-processing
+
+For data pre-processing, I first filtered the notable fires to only include fire size $\geq$ 300 acres, inline with the operational wildfire reporting standards used by U.S. fire management agencies. Additionally, I added a few new variables that may be helpful for later temporal modeling: adjusted date format, month, and season.
+
+The report should explain - How notable fires are identified and filtered- How space–time units are constructed (e.g., grid-by-month)- How the binary outcome variable is defined- How predictors are constructed or aggregated- How missing data or edge cases are handled
+
+Minimum required output: A summary table describing the final dataset used for predictive modeling.
+
 ```{r}
-# filter notable fires, date formatting
+# filter notable fires, create variables for date, month, and season
 wildfires1 <- wildfires %>% 
   filter(FIRE_SIZE >= 300) %>%
   mutate(Date = as.Date(DISCOVERY_DATE - 2440587.5, origin = "1970-01-01")) %>%
-# column for month
-  mutate(season = case_when(month %in% c('December', 'January', 'February') ~ 'winter', month %in% c('May', 'April', 'March') ~ 'spring', month %in% c('June','July','August'), month %in% c('September','October','November')))
+  mutate(Month = format(Date, "%m")) %>%
+ mutate(Season = case_when(
+   Month %in% 09:11 ~ "Fall",
+   Month %in% c(12, 01, 02) ~ "Winter", 
+   Month %in% 03:05 ~ "Spring", 
+   TRUE ~ "Summer"))
 
 head(wildfires1)
-
-# make a variable for month and season
 
 ```
 
 ## 2. Exploratory Data Analysis
 
+minimum output = 2 exploratory plots w interpretation
+
+How strong is seasonality?
+
+Are there trends over time?
+
+How does wildfire incidence vary across space?
+
+How do predictors differ between fire and non-fire observations?
+
+First, I explored the seasonality of the number of wildfires and fire size to better understand these relationships. The following two visuals display seasonality and trends over time.
+
 ```{r}
-# minimum output = 2 exploratory plots w interpretation
-# How strong is seasonality?
-# Are there trends over time?
+# average fire size by year and facet by season, line to show the trend over time
+wildfires2 <- wildfires1 %>%  
+  filter(FIRE_SIZE >= 300) %>%
+  mutate(Date = as.Date(DISCOVERY_DATE - 2440587.5, origin = "1970-01-01")) %>%
+  mutate(Month = format(Date, "%m")) %>%
+ mutate(Season = case_when(
+   Month %in% 09:11 ~ "Fall",
+   Month %in% c(12, 01, 02) ~ "Winter", 
+   Month %in% 03:05 ~ "Spring", 
+   TRUE ~ "Summer")) %>%
+  group_by(FIRE_YEAR, Season) %>%
+  summarize(average = mean(FIRE_SIZE))
+
+ggplot(wildfires2, aes(x = FIRE_YEAR, y = average)) + 
+  geom_line(color = "cornflowerblue", size = 1) + 
+  geom_point(color = "blue2") +
+  facet_wrap(~ Season) + 
+  geom_smooth(method = "lm", color = "black", size = 0.5) + 
+  labs(title = "Average Fire Size by Year", x = "Year", y = "Average Size (acres)")
 ```
+This figure shows that over time, Fall is generally a flat trend with one year unexpectedly high for average fire size. Summer fire size is generally increasing, compared to winter that shows a decreasing fire size average. All seasons have some years with an unexpectedly high average fire size, but the trend line shows the general trend.
+
+Then, I compared the number of fires per season over time to understand actual number of fires rather than just fire size.
+
+```{r}
+# number of fires over time by season
+wildfires1 %>% ggplot + 
+  geom_histogram(mapping = aes(x = FIRE_YEAR), fill = "cornflowerblue") + 
+  facet_wrap(~ Season) + 
+  labs(title = "Annual Wildfires per Year", x = "Year", y = "Number of Wildfires")
+```
+This plot reveals that summer has many more fires compared to fall and winter, so the generally increasing trend in the summertime is important to pay attention to. Winter has the least number of fires and Fall is in between summer and winter. Note that seasonality is very important to the number of fires per year.
+
+```{r}
+# How does wildfire incidence vary across space?
+# show some spacial patterns 
+# maybe pick 2 states to focus on in the report?
+
+byyear <- wildfires %>%
+  group_by(FIRE_YEAR) %>%
+  summarize(count = n()) 
+byyear
+
+colrange <- range(log(wildfires$FIRE_SIZE))
+
+map <- wildfires %>%
+  filter(!STATE %in% c("AK", "HI", "PR")) %>%
+  ggplot(aes(x = LONGITUDE, y = LATITUDE, color = log(FIRE_SIZE))) + 
+   geom_point(alpha = 0.2, size = 0.3) +
+  scale_color_viridis_c(option = "plasma", limits = colrange) +
+  coord_fixed(1.3) + 
+  theme_void() + 
+labs(title = "Mainland Wildfires", color = "Log Fire\n Size (acres)", x = NULL, y = NULL) + 
+  theme(legend.title = element_text(size = 7), axis.title = element_text(size = 8), plot.title = element_text(hjust = 0.5, size = 9), axis.text = element_blank(), axis.ticks = element_blank()) 
+map
+
+HImap <- wildfires %>%
+  filter(STATE == "HI") %>%
+  ggplot(aes(x = LONGITUDE, y = LATITUDE, color = log(FIRE_SIZE))) + 
+   geom_point(alpha = 0.4, size = 0.3) +
+  scale_color_viridis_c(option = "plasma", limits = colrange) +
+  coord_fixed(1.3) + 
+  theme_void() + 
+labs(title = "Hawaii Wildfires", color = "Log Fire\n Size (acres)", x = NULL, y = NULL) + 
+  theme(legend.title = element_text(size = 7), axis.title = element_text(size = 8), plot.title = element_text(hjust = 0.5, size = 9), axis.text = element_blank(), axis.ticks = element_blank())
+HImap
+
+AKmap <- wildfires %>%
+  filter(STATE == "AK") %>%
+  ggplot(aes(x = LONGITUDE, y = LATITUDE, color = log(FIRE_SIZE))) + 
+   geom_point(alpha = 0.5, size = 0.3) +
+  scale_color_viridis_c(option = "plasma", limits = colrange) +
+  coord_fixed(1.3) + 
+  theme_void() + 
+labs(title = "Alaska Wildfires", color = "Log Fire\n Size (acres)", x = NULL, y = NULL) + 
+  theme(legend.title = element_text(size = 7), axis.title = element_text(size = 8), plot.title = element_text(hjust = 0.5, size = 9), axis.text = element_blank(), axis.ticks = element_blank())
+AKmap
+```
+The above three plots show the location and log(fire size) for the U.S. mainland, Hawaii, and Alaska. Wildfires look the most dense in California, New York, and in the southern states.
 
 ## 3. Modeling
 
