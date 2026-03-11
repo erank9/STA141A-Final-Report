@@ -141,7 +141,7 @@ panel <- panel %>%
 
 head(panel) 
 
-Below I created the prediction target, y_next and baseline predictors. 
+Below I created the prediction target, y_next and baseline predictors.
 
 {r}
 panel <- panel %>%
@@ -168,7 +168,7 @@ panel <- panel %>%
 
 panel %>% select('state') %>% summary
 
-Next I created cyclical month encoding to add a helpful temporal variable to the panel. 
+Next I created cyclical month encoding to add a helpful temporal variable to the panel.
 
 {r}
 panel <- panel %>% 
@@ -213,7 +213,7 @@ panel %>%
   select("n_fires", "fire_lag12", "fire_roll3", "fire_roll12", "size_roll3", "size_roll12") %>% summary
 
 
-Since seasonality seems like a strong predictor of wildfires, I also created a variable for fire season between May and November, following the suggested fire season of the Western Fire Chiefs Association. 
+Since seasonality seems like a strong predictor of wildfires, I also created a variable for fire season between May and November, following the suggested fire season of the Western Fire Chiefs Association.
 
 {r}
 panel <- panel %>%
@@ -387,9 +387,9 @@ glimpse(model_df)
 
 logistic regression model:
 
-logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire+roll12 + $\beta_{11}$ * size_roll3 + $\beta_{12}$ * size_roll12 + $\beta_{13}$ * maxtemp + $\beta_{14}$ * phdi 
+logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire+roll12 + $\beta_{11}$ * size_roll3 + $\beta_{12}$ * size_roll12 + $\beta_{13}$ * maxtemp + $\beta_{14}$ * phdi
 
-I wanted to check how each predictor correlates to y_next to determine if all should be included in the final model. 
+I wanted to check how each predictor correlates to y_next to determine if all should be included in the final model.
 
 {r}
 correlation1 <- model_df %>%
@@ -416,19 +416,19 @@ ggplot(corr_df, aes(x = reorder(predictor, correlation), y = abs(correlation))) 
     y = "Absolute correlation with y_next"
   )
 
-This plot suggests the lowest correlation variables are size_roll3 ,  size_roll12, and phdi. In the Modeling section, I will drop these to reduce noise.
+This plot suggests the lowest correlation variables are size_roll3 , size_roll12, and phdi. In the Modeling section, I will drop these to reduce noise.
 
 updated logistic regression model:
 
-logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire_roll12 + $\beta_{11}$ * fire_season + $\beta_{12}$ * maxtemp  
+logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire_roll12 + $\beta_{11}$ * fire_season + $\beta_{12}$ * maxtemp
 
-The response variable, y_next, was selected because it determines if a notable fire happens within the specific grid and month. This is appropriate for predicting wildfires using a binary outcome. 
+The response variable,y_next, was selected because it determines if a notable fire happens within the specific grid and month. This is appropriate for predicting wildfires using a binary outcome.
 
-The predictor variables were selected because spatial and temporal variables seemed influential to wildfire patterns explored above. Additionally, historical fire activity was included to potentially strengthen the model's ability to predict patterns. Predictors were selected based on exploratory analysis done previously in the report.  
+The predictor variables were selected because spatial and temporal variables seemed influential to wildfire patterns explored above. Additionally, historical fire activity was included to potentially strengthen the model's ability to predict patterns. Predictors were selected based on exploratory analysis done previously in the report.
 
-Environmental information (maxtemp) was included as well to capture the effects of the maximum monthly temperature on wildfire incidence. This is a climate condition that can aggravate fire risk. 
+Environmental information (maxtemp) was included as well to capture the effects of the maximum monthly temperature on wildfire incidence. This is a climate condition that can aggravate fire risk.
 
-XGBoost is a machine learning algorithm that uses decision trees to correct previous errors to get more accurate. This model may be good to compare to linear regression because it can capture non-linear relationships. 
+XGBoost is a machine learning algorithm that uses decision trees to correct previous errors to get more accurate. This model may be good to compare to linear regression because it can capture non-linear relationships.
 
 Adjusted model
 
@@ -506,13 +506,13 @@ cat('Overall, XGboost outperforms logistic regression in AUC by ',
 
 Overall, XGboost outperforms logistic regression in AUC by 9.49%. Visually, the AUC plot shows that in most all years except two, XGBoost outperforms the logistic regression model.
 
-This higher AUC suggests that the prediction has some nonlinear relationships that XGBoost can capture better than the baseline linear regression. This report uses AUC over accuracy because the incidence of a notable fire is rare. 
+This higher AUC suggests that the prediction has some nonlinear relationships that XGBoost can capture better than the baseline linear regression. This report uses AUC over accuracy because the incidence of a notable fire is rare.
 
 The time-aware cross-validation shows that the model does decently well predicting future years.
 
-Although the XGBoost model did perform better than the linear regression, the improvement is not drastic. Adding maximum monthly temperature did improve the XGBoost model, but PHDI supported the linear model more. This could be due to a more linear relationship between phdi and fire incidence. If environmental data was available for a smaller time unit and more specific locations, it may have been able to contribute more meaningfully to the XGBoost model. Adding more environmental predictors could also support the prediction task: wind speed and humidity. 
+Although the XGBoost model did perform better than the linear regression, the improvement is not drastic. Adding maximum monthly temperature did improve the XGBoost model, but PHDI supported the linear model more. This could be due to a more linear relationship between phdi and fire incidence. If environmental data was available for a smaller time unit and more specific locations, it may have been able to contribute more meaningfully to the XGBoost model. Adding more environmental predictors could also support the prediction task: wind speed and humidity.
 
-While some improvements could be made, this model does reasonably well for predicting the rare event of a notable wildfire.  
+While some improvements could be made, this model does reasonably well for predicting the rare event of a notable wildfire.
 
 XGBoost feature importances
 
