@@ -29,7 +29,7 @@ phdi <- read_csv("/Users/eloiserank/Desktop/STA 141A/projects/phdi.csv", skip = 
 
 Abstract
 
-Wildfires are becoming a more severe and chronic issue across the United States. Predicting the time and location of future wildfires would be helpful for management practices, preventative measures, and potentially protecting lives and property. Using historical wildfire records from 1992 to 2015, this report explores temporal, spatial, and environmental factors that may influence wildfire frequency. I explored potential trends through visualizations before creating a general linear and XGBoost model to predict future fires. XGBoost achieved 9.49% lower error compared to the generalized linear model. Adding PHDI and maximum temperature did not improve the prediction by much, potentially limited by the broad temporal units available. The variables important to the XGBoost model were mostly related to spatial and temporal information (lon_bin, lat_bin, month_cos , month_sin,year). Accurate models to predict wildfires could significantly impact outcomes of management and emergency response.
+Wildfires are becoming a more severe and chronic issue across the United States. Predicting the time and location of future wildfires would be helpful for management practices, preventative measures, and potentially protecting lives and property. Using historical wildfire records from 1992 to 2015, this report explores temporal, spatial, and environmental factors that may influence wildfire frequency. I explored potential trends through visualizations before creating a general linear and XGBoost model to predict future fires. XGBoost achieved 9.49% higher AUC compared to the generalized linear model. Adding PHDI and maximum temperature did not improve the prediction by much, potentially limited by the broad temporal units available. The variables important to the XGBoost model were mostly related to spatial and temporal information (lon_bin, lat_bin, month_cos , month_sin,year). Accurate models to predict wildfires could significantly impact outcomes of management and emergency response.
 
 Introduction (optional)
 
@@ -374,12 +374,6 @@ The mean probability of a notable fire in the next month peaks from months 5-7. 
 3. Modeling
 
 {r}
-# Baseline Model - linear regression
-# Model of your choice - should outperform baseline
-
-# each model, justify response and predictors of the model, explain relationship between response and predictors under the model (equation or schematic)
-# for the second model, provide reasons why you chose such model
-
 model_df <- panel %>%
   mutate(y_next = factor(y_next, levels = c(0, 1))) %>%
   select(y_next, lat_bin, lon_bin, state, 
@@ -394,8 +388,6 @@ glimpse(model_df)
 logistic regression model:
 
 logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire+roll12 + $\beta_{11}$ * size_roll3 + $\beta_{12}$ * size_roll12 + $\beta_{13}$ * maxtemp + $\beta_{14}$ * phdi 
-
-The logistic regression model acts as the baseline to improve upon with the XGBoost. The XGBoost is a machine learning algorithm that uses decision trees to correct previous errors to get more accurate. This model may capture non-linear effects better.
 
 I wanted to check how each predictor correlates to y_next to determine if all should be included in the final model. 
 
@@ -428,9 +420,17 @@ This plot suggests the lowest correlation variables are size_roll3 ,  size_roll1
 
 updated logistic regression model:
 
-logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire+roll12 + $\beta_{11}$ * fire_season + $\beta_{12}$ * maxtemp  
+logit(P(y_next = 1)) = $\beta_0$ + $\beta_1$ * lat_bin + $\beta_2$ * lon_bin + $\beta_3$ * state + $\beta_4$ * month_cos + $\beta_5$ * month_sin + $\beta_6$ * year + $\beta_7$ * n_fires + $\beta_8$ * fire_lag12 + $\beta_9$ * fire_roll3 + $\beta_{10}$ * fire_roll12 + $\beta_{11}$ * fire_season + $\beta_{12}$ * maxtemp  
 
-adjusted model
+The response variable, y_next, was selected because it determines if a notable fire happens within the specific grid and month. This is appropriate for predicting wildfires using a binary outcome. 
+
+The predictor variables were selected because spatial and temporal variables seemed influential to wildfire patterns explored above. Additionally, historical fire activity was included to potentially strengthen the model's ability to predict patterns. Predictors were selected based on exploratory analysis done previously in the report.  
+
+Environmental information (maxtemp) was included as well to capture the effects of the maximum monthly temperature on wildfire incidence. This is a climate condition that can aggravate fire risk. 
+
+XGBoost is a machine learning algorithm that uses decision trees to correct previous errors to get more accurate. This model may be good to compare to linear regression because it can capture non-linear relationships. 
+
+Adjusted model
 
 {r}
 model_df2 <- panel %>%
@@ -448,13 +448,6 @@ model_df2 <- panel %>%
 4. Model Fitting and Validation
 
 {r}
-# appropriate train-test split scheme
-# appropriate time-aware evaluation metric
-# correct fitting procedure and computing metric
-# comparison with proper plots
-# more points - choicing auc, justify why auc is better, has an advantage 
-# explain limitations, why it's not much improved, ok if the model is not much better
-
 years_sorted <- sort(unique(model_df2$year))
 min_train_years <- 3
 
@@ -513,9 +506,13 @@ cat('Overall, XGboost outperforms logistic regression in AUC by ',
 
 Overall, XGboost outperforms logistic regression in AUC by 9.49%. Visually, the AUC plot shows that in most all years except two, XGBoost outperforms the logistic regression model.
 
+This higher AUC suggests that the prediction has some nonlinear relationships that XGBoost can capture better than the baseline linear regression. This report uses AUC over accuracy because the incidence of a notable fire is rare. 
+
 The time-aware cross-validation shows that the model does decently well predicting future years.
 
-Adding maximum monthly temperature did improve the XGBoost model, but PHDI supported the linear model more. This could be due to a more linear relationship between phdi and fire incidence. The environmental data may be able to contribute more to the models given smaller time scales than monthly.
+Although the XGBoost model did perform better than the linear regression, the improvement is not drastic. Adding maximum monthly temperature did improve the XGBoost model, but PHDI supported the linear model more. This could be due to a more linear relationship between phdi and fire incidence. If environmental data was available for a smaller time unit and more specific locations, it may have been able to contribute more meaningfully to the XGBoost model. Adding more environmental predictors could also support the prediction task: wind speed and humidity. 
+
+While some improvements could be made, this model does reasonably well for predicting the rare event of a notable wildfire.  
 
 XGBoost feature importances
 
@@ -563,11 +560,11 @@ The gradient boosted model outperforms the baseline logistic regression due to n
 
 The modeling reveals that seasonality is important for prediction because fires are more likely to occur in summer months.
 
-Adding the PHDI and maximum temperature variables did not seem to improve the model much if at all. Maybe this could have been improved by using a smaller time unit than month, but month was the smallest possible time scale available on the National Centers for Environmental Information website. Adding more variables such as wind speed and humidity could also improve the model's prediction.
+Adding the environmental variables did not seem to improve the model much as expected. Maybe this could have been improved by using a more specific temporal and spatial scale, but month was the smallest possible time scale available on the National Centers for Environmental Information website. Adding more variables such as wind speed and humidity could also improve the model's prediction.
 
 The most important variables to the XGBoost model were generally related to spatial data (latitude and longitude), monthly maximum temperature, and temporal information (month sin and cos, year).
 
-Fire prediction modeling like this can help with fire management and safety.
+Future projects could implement more specific environmental variables like wind speed and humidity, which could improve predictive power and contribute to fire management and safety.
 
 Code Resources:
 
@@ -584,6 +581,8 @@ https://xgboost.readthedocs.io/en/release_1.5.0/R-package/xgboostPresentation.ht
 https://stackoverflow.com/questions/40968348/xgboost-dealing-with-imbalanced-classification-data
 
 https://www.projectpro.io/recipes/visualise-xgboost-feature-importance-r
+
+https://medium.com/@heyamit10/xgboost-vs-linear-regression-a-practical-guide-aa09a68af12b
 
 weather data:
 
